@@ -3,10 +3,17 @@ import Groq from "groq-sdk";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const MODEL_CLUSTER = [
-  "llama-3.1-8b-instant",
-  "gemma2-9b-it",
-  "llama3-8b-8192",
-  "llama-3.1-70b-versatile"
+  // TIER 1: The Speedsters (High RPM, good for rapid roasts)
+  "llama-3.1-8b-instant",       // 14.4K RPD - Your main workhorse
+  "moonshotai/kimi-k2-instruct", // 60 RPM - Great for handling rapid user typing
+  "qwen/qwen3-32b",             // 60 RPM - High reliability and smart for its size
+  
+  // TIER 2: The Logic Specialists (Smarter, used if Tier 1 is busy)
+  "meta-llama/llama-4-scout-17b-16e-instruct", // 30K TPM - Very high token capacity
+  "meta-llama/llama-4-maverick-17b-128e-instruct", // Balanced 17B model
+
+  // TIER 3: The "Final Boss" (Emergency fallback for win conditions)
+  "llama-3.3-70b-versatile"      // 12K TPM - The smartest, but limited to 1K RPD
 ];
 
 export default async function handler(req, res) {
