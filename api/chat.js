@@ -28,13 +28,17 @@ export default async function handler(req, res) {
   } = req.body;
 
   // SANITIZATION: Convert frontend format {text, sender} to API format {content, role}
-  const formattedHistory = (history || []).map(msg => ({
+  const rawHistory = (history || []).map(msg => ({
     role: msg.sender === 'ai' ? 'assistant' : 'user',
     content: msg.text
   }));
 
+  const trimmedHistory = trimmedHistory.slice(-10);
+
   for (const modelId of MODEL_CLUSTER) {
     try {
+      const isFinalBoss = modelId.includes('70b');
+
       const completion = await groq.chat.completions.create({
         messages: [
           {
@@ -240,7 +244,7 @@ FINAL VERDICTS (when isFinal=true):
 KEEP IT SPICY. TAUNT THEM. GASLIGHT THEM. BUT PROGRESS THROUGH QUESTIONS.
 You're not just asking questions - you're psychologically dismantling them.`
           },
-          ...formattedHistory,
+          ...trimmedHistory,
           { 
             role: "user", 
             content: `STAGE: ${stage}. INPUT: "${userInput}". TIME: ${telemetry?.timeTaken || 0}s. TABS: ${telemetry?.tabSwitches || 0}` 
@@ -248,7 +252,7 @@ You're not just asking questions - you're psychologically dismantling them.`
         ],
         model: modelId,
         response_format: { type: "json_object" },
-        temperature: 0.8,
+        temperature: isFinalBoss ? 0.85 : 0.8,
         max_tokens: 800,
       });
 
@@ -263,10 +267,13 @@ You're not just asking questions - you're psychologically dismantling them.`
       });;
 
     } catch (error) {
-      console.error("Model error:", error);
+      console.warn(`Model ${modelId} failed: ${error.message}. Trying next...`);
       continue; // Try next model
     }
   }
 
-  res.status(500).json({ messages: ["System instability detected. Try again."], isFinal: false });
+  res.status(500).json({ 
+    messages: ["System instability detected. My processors are... refusing to engage with you."], 
+    isFinal: false 
+  });
 }
