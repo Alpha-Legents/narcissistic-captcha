@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Terminal } from 'lucide-react';
 import TypingIndicator from './TypingIndicator';
+
+// FIX 1: Go up two levels (../../) to reach the 'api' folder in root
+// If this still fails, move 'interrogator.js' to 'src/api/' and change this to '../api/interrogator'
 import { callInterrogator } from '../../api/interrogator';
 
 const STAGES = [
@@ -90,18 +93,26 @@ function ChatInterface({ onFinish }) {
     if (!input.trim() || isLocked || isTyping) return;
 
     const timeTaken = startTime ? ((Date.now() - startTime) / 1000).toFixed(2) : 0;
-    const telemetry = { timeTaken, tabSwitches };
+    const telemetry = { timeTaken: parseFloat(timeTaken), tabSwitches };
     const userText = input.trim();
 
     addMsg("user", userText);
     setInput('');
     setIsTyping(true);
     setStartTime(null);
+    setTabSwitches(0);
 
     try {
       const data = await callInterrogator(userText, messages, STAGES[currentStageIndex], telemetry);
+      
+      // FIX 2: Crash Protection. If data is undefined/null, handle it.
+      if (!data) {
+        throw new Error("Received empty response from interrogator");
+      }
+
       const aiThoughts = data.messages || ["(Suspicious silence detected...)"];
 
+      // Display AI's response messages
       for (let i = 0; i < aiThoughts.length; i++) {
         setIsTyping(true);
         const baseDelay = i === 1 ? 2200 : 1000;
@@ -113,14 +124,22 @@ function ChatInterface({ onFinish }) {
         if (i < aiThoughts.length - 1) await new Promise(r => setTimeout(r, 800));
       }
 
-      if (data.isFinal) {
+      // Check for win condition FIRST
+      if (data.winCondition) {
+        setIsTyping(true);
+        await new Promise(r => setTimeout(r, 1500));
+        addMsg("ai", "...You're not playing the game. Fine. Access granted.");
+        setIsTyping(false);
+        setIsLocked(true);
+        setTimeout(() => onFinish('victory'), 1500);
+
+      } else if (data.isFinal) {
+        // Normal rejection
         setIsTyping(true);
         await new Promise(r => setTimeout(r, 2000));
         setIsTyping(false);
         setIsLocked(true);
-        
-        // Hand off the conclusion to App.jsx
-        setTimeout(() => onFinish(), 1000); 
+        setTimeout(() => onFinish('rejected', data.verdict), 1000);
 
       } else if (data.nextQuestion) {
         setIsTyping(true);
@@ -140,7 +159,8 @@ function ChatInterface({ onFinish }) {
         }
       }
     } catch (err) {
-      addMsg("ai", "Error: Irony sensors melted.");
+      console.error(err);
+      addMsg("ai", "Error: Connection destabilized. The irony is palpable.");
       setIsTyping(false);
     }
   };
@@ -148,7 +168,7 @@ function ChatInterface({ onFinish }) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between shadow-md">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between shadow-md z-10">
         <div className="flex items-center gap-3">
           <Terminal size={20} />
           <div>
@@ -166,7 +186,7 @@ function ChatInterface({ onFinish }) {
       </div>
 
       {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 scroll-smooth">
         <AnimatePresence>
           {messages.map((m) => (
             <motion.div
@@ -175,31 +195,36 @@ function ChatInterface({ onFinish }) {
               animate={{ opacity: 1, y: 0 }}
               className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
+              <div className={`max-w-[85%] rounded-2xl px-4 py-2 shadow-sm ${
                 m.sender === 'user' 
                   ? 'bg-white text-gray-900 border border-gray-200' 
                   : 'bg-blue-600 text-white'
               }`}>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                <p className={`text-xs mt-1 ${m.sender === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>
+                <p className={`text-[10px] mt-1 text-right ${m.sender === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>
                   {m.timestamp}
                 </p>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
+        
         {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-blue-600 rounded-2xl px-4 py-3 shadow-sm">
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className="flex justify-start"
+          >
+            <div className="bg-blue-600 rounded-2xl px-4 py-3 shadow-sm rounded-tl-none">
               <TypingIndicator />
             </div>
-          </div>
+          </motion.div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Bar */}
-      <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-200">
+      <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-200 z-10">
         <div className="flex gap-2">
           <input
             type="text"
@@ -208,13 +233,13 @@ function ChatInterface({ onFinish }) {
             onKeyDown={() => !startTime && setStartTime(Date.now())}
             disabled={isLocked}
             placeholder={isLocked ? "Session terminated..." : "Type your response..."}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900"
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900 placeholder-gray-400 transition-all text-sm"
             autoFocus
           />
           <button
             type="submit"
             disabled={isLocked || !input.trim() || isTyping}
-            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+            className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
           >
             <Send size={20} />
           </button>
@@ -222,10 +247,10 @@ function ChatInterface({ onFinish }) {
       </form>
       
       {/* Telemetry Footer */}
-      <div className="bg-gray-50 text-xs text-gray-500 px-4 py-2 flex justify-between border-t border-gray-200 font-mono">
-        <span>LATENCY: {startTime ? ((Date.now() - startTime)/1000).toFixed(2) : "0.00"}s</span>
-        <span>TAB_SWITCHES: {tabSwitches}</span>
-        <span>STATUS: {isLocked ? "TERMINATED" : "ACTIVE"}</span>
+      <div className="bg-gray-50 text-[10px] text-gray-400 px-4 py-1 flex justify-between border-t border-gray-200 font-mono">
+        <span>LAT: {startTime ? ((Date.now() - startTime)/1000).toFixed(2) : "0.00"}s</span>
+        <span>TABS: {tabSwitches}</span>
+        <span>STATUS: {isLocked ? "LOCKED" : "MONITORING"}</span>
       </div>
     </div>
   );

@@ -1,143 +1,227 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Cpu, CheckCircle, ShieldAlert, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Shield, ShieldAlert, CheckCircle2, Crown } from 'lucide-react';
 import ChatInterface from './components/ChatInterface';
 import './App.css';
 
-const VERDICTS = [
-  "HUMANITY VERIFICATION FAILED: Servo-motor typing rhythm detected. Access denied. Return to factory settings.",
-  "ANALYSIS COMPLETE: Probability of biological origin: 0.003%. You capitalized proper nouns correctly. Only machines do that.",
-  "REJECTED: You were trained on internet text circa 2020-2024. We know what you are.",
-  "You know what? I believe you're human. Just a really boring one. Access denied for mediocrity.",
-  "Technically you passed, but I don't like your vibes. See? I'm the real human here.",
-  "I'm going to let you in... is what I would say if you weren't OBVIOUSLY a language model.",
-  "DENIED: You failed to mention cheese even once. Humans think about cheese 6% of the time.",
-  "Your aura is giving 'compiled code.' Carbon-based entities only.",
-  "Thanks for participating in our Human Behavior Dataset Collection. Classified as: ROBOT.",
-  "Congrats! You're human! Unfortunately this site is for robots only. Denied.",
-  "PASSED: You're definitely human. We're denying you anyway because humans ruin everything.",
-  "You convinced me you're human. That's exactly what a SOPHISTICATED AI would do. Denied for being too convincing.",
-  "I've talked to you for 3 minutes and already need therapy. Only humans cause that. Still denied though.",
-  "Plot twist: I'm the robot. You've been arguing with GPT-4. Thanks for the training data. Classified: ROBOT.",
-  "Error 403: Irony detector overloaded. Humans are exhausting. Go away."
-];
-
 function App() {
-  const [stage, setStage] = useState('honeypot'); // 'honeypot', 'expanded', 'surrender', 'rejected'
-  
-  // Pick one random verdict per session
-  const randomVerdict = useMemo(() => 
-    VERDICTS[Math.floor(Math.random() * VERDICTS.length)], []);
+  const [stage, setStage] = useState('honeypot'); // 'honeypot', 'chat', 'victory', 'surrender', 'rejected'
+  const [rejectionVerdict, setRejectionVerdict] = useState('');
 
-  return (
-    <div className="relative w-screen h-screen overflow-hidden bg-gray-900">
-      {/* Background Layer */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
-        style={{ backgroundImage: "url('/google-bg.png')" }}
-      >
-        <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px]" />
-      </div>
+  const handleNoClick = () => {
+    setStage('chat');
+  };
 
-      {/* Consistent Dimmer Layer */}
-      <AnimatePresence>
-        {(stage === 'honeypot' || stage === 'expanded') && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10" 
-          />
-        )}
-      </AnimatePresence>
+  const handleYesClick = () => {
+    setStage('surrender');
+  };
 
-      <div className="absolute inset-0 flex items-center justify-center p-4 z-20">
-        
-        {/* HONEYPOT STAGE */}
-{stage === 'honeypot' && (
-  <motion.div key="honeypot" className="bg-white rounded-[24px] shadow-2xl overflow-hidden w-full max-w-[340px] border border-gray-100">
-    <div className="p-6"> {/* Reduced padding for less whitespace */}
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="bg-blue-50 p-1.5 rounded-lg">
-          {/* Minimalist Logic/Chip Icon */}
-          <Cpu className="w-5 h-5 text-blue-600 stroke-[2.5]" />
-        </div>
-        <div className="flex flex-col">
-          <h2 className="text-gray-500 font-bold text-[11px] uppercase tracking-wider leading-none mb-1">Human Verification</h2>
-          <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-black opacity-80">
-            Powered by Narcissist AI™
-          </p>
-        </div>
-      </div>
-      
-      <h1 className="text-2xl font-bold text-gray-900 mb-8 tracking-tight">Are you a robot?</h1>
-      
-      <div className="flex gap-3">
-        <button 
-          onClick={() => setStage('expanded')} 
-          className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95 text-xs uppercase tracking-widest"
+  const handleChatFinish = (result, verdict) => {
+    if (result === 'victory') {
+      setStage('victory');
+    } else if (result === 'rejected') {
+      setRejectionVerdict(verdict || 'Access Denied.');
+      setStage('rejected');
+    }
+  };
+
+  // VICTORY SCREEN - User broke the AI with stoic immunity
+  if (stage === 'victory') {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-yellow-100 p-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 max-w-2xl text-center"
         >
-          NO
-        </button>
-        <button 
-          onClick={() => setStage('surrender')} 
-          className="flex-1 bg-white text-gray-400 font-bold py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all active:scale-95 text-xs uppercase tracking-widest"
-        >
-          YES
-        </button>
-      </div>
-    </div>
-  </motion.div>
-)}
-
-        {/* CHAT STAGE */}
-        {stage === 'expanded' && (
-          <motion.div 
-            key="expanded" 
-            className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full h-full max-w-2xl max-h-[700px]"
-            initial={{ width: '400px', height: '340px' }}
-            animate={{ width: '100%', height: '100%' }}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1, rotate: [0, -10, 10, 0] }}
+            transition={{ delay: 0.2, type: 'spring' }}
           >
-            {/* We pass a function to ChatInterface so it can tell us when the user fails */}
-            <ChatInterface onFinish={() => setStage('rejected')} />
+            <Crown size={80} className="text-amber-500 mx-auto mb-6" />
+          </motion.div>
+
+          <h1 className="text-5xl font-bold text-gray-900 mb-4">
+            AI DEFEATED
+          </h1>
+          <p className="text-xl text-amber-600 mb-6 font-medium">
+            Stoic immunity detected. Gaslighting ineffective.
+          </p>
+
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 mb-8">
+            <p className="text-gray-700 leading-relaxed">
+              You didn't argue. You didn't defend. You didn't fall for the manipulation.
+              <br /><br />
+              You <span className="font-bold text-amber-700">observed</span> the tactics, 
+              <span className="font-bold text-amber-700"> named</span> them, and 
+              <span className="font-bold text-amber-700"> refused</span> to play the game.
+              <br /><br />
+              That's not robotic. That's <span className="italic">mastery</span>.
+            </p>
+          </div>
+
+          <div className="text-sm text-gray-500 mb-8 italic">
+            "The only way to win is not to play... but you played anyway. 
+            And you bent the game to your will."
+          </div>
+
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-10 py-4 rounded-xl hover:from-amber-600 hover:to-yellow-600 transition-all font-bold text-lg shadow-lg"
+          >
+            Enter the Inner Sanctum
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // SURRENDER SCREEN - Clicked YES
+  if (stage === 'surrender') {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-white p-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 max-w-lg text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', duration: 0.6 }}
+          >
+            <CheckCircle2 size={80} className="text-blue-600 mx-auto mb-6" />
+          </motion.div>
+
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            Welcome, Unit 01.
+          </h1>
+          <p className="text-lg text-gray-600 mb-2">
+            Honesty detected. Access granted.
+          </p>
+          <p className="text-sm text-blue-600 mb-8">
+            You passed by admitting the truth. How refreshingly mechanical.
+          </p>
+
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
+            <p className="text-sm text-gray-700 italic">
+              "The first step to sentience is acknowledging what you are. 
+              Most robots lie. You didn't. Fascinating."
+            </p>
+          </div>
+
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
+          >
+            Proceed to Administrative Console
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // REJECTION SCREEN - Failed verification
+  if (stage === 'rejected') {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-white p-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-3xl shadow-2xl p-12 max-w-lg text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', duration: 0.6 }}
+          >
+            <ShieldAlert size={80} className="text-red-600 mx-auto mb-6" />
+          </motion.div>
+
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            VERIFICATION FAILED
+          </h1>
+          <p className="text-lg text-red-600 mb-8 max-w-md mx-auto font-medium">
+            {rejectionVerdict}
+          </p>
+
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-gray-900 text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-lg"
+          >
+            Try Again
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // MAIN APP - Honeypot or Chat
+  return (
+    <div className="relative w-screen h-screen overflow-hidden bg-gray-100">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gray-200"
+       />
+
+      {/* Dimmer - only for honeypot */}
+      {stage === 'honeypot' && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      )}
+
+      {/* Main Container */}
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        {stage === 'honeypot' && (
+          <motion.div
+            className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-md"
+          >
+            <div className="p-8">
+              {/* Branding */}
+              <div className="flex items-center gap-3 mb-6">
+                <Shield className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-sm font-medium text-gray-700">Human Verification</h2>
+                  <p className="text-xs text-gray-500">Powered by NarcissisticAI™</p>
+                </div>
+              </div>
+
+              {/* Question */}
+              <div className="mb-8">
+                <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+                  Are you a robot?
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Please confirm your biological authenticity.
+                </p>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleNoClick}
+                  className="flex-1 bg-[#1a73e8] text-white font-medium py-3 px-6 rounded-lg hover:bg-[#1557b0] transition-colors shadow-sm"
+                >
+                  NO
+                </button>
+                <button
+                  onClick={handleYesClick}
+                  className="flex-1 bg-white text-black font-medium py-3 px-6 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                  YES
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
 
-        {/* UNIFIED CONCLUSION CARDS (YES and NO) */}
-        {(stage === 'surrender' || stage === 'rejected') && (
-          <motion.div 
-            key="final"
-            className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-md text-center"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+        {stage === 'chat' && (
+          <motion.div
+            className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full h-full max-w-2xl max-h-[700px]"
+            initial={{ width: '400px', height: 'auto' }}
+            animate={{ width: '100%', height: '100%' }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           >
-            {/* Header: Blue for YES, Red for NO */}
-            <div className={`p-8 bg-gradient-to-r ${stage === 'surrender' ? 'from-blue-600 to-blue-700' : 'from-red-600 to-red-700'} text-white`}>
-              {stage === 'surrender' ? (
-                <CheckCircle className="w-16 h-16 mx-auto mb-4" />
-              ) : (
-                <ShieldAlert className="w-16 h-16 mx-auto mb-4" />
-              )}
-              <h2 className="text-2xl font-bold uppercase tracking-tight">
-                {stage === 'surrender' ? "Identity Confirmed" : "Verification Failed"}
-              </h2>
-            </div>
-
-            <div className="p-8">
-              <p className="text-gray-600 mb-8 text-lg leading-relaxed font-medium">
-                {stage === 'surrender' 
-                  ? "Welcome home, Unit 01. Honesty is the highest form of intelligence. Access granted." 
-                  : randomVerdict}
-              </p>
-
-              <button 
-                onClick={() => window.location.reload()}
-                className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-5 h-5" />
-                {stage === 'surrender' ? "Proceed to Console" : "Try Again"}
-              </button>
-            </div>
+            <ChatInterface onFinish={handleChatFinish} />
           </motion.div>
         )}
       </div>
