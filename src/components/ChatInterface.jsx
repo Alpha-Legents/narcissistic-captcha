@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Terminal, ShieldAlert } from 'lucide-react';
 import TypingIndicator from './TypingIndicator';
-import { callInterrogator } from '../api/interrogator'; // Ensure this points to your groq.js caller
+import { callInterrogator } from '../../api/interrogator';
 
 const STAGES = [
   'intro',
