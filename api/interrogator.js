@@ -1,8 +1,8 @@
-export const callInterrogator = async (userInput, history, stage, telemetry) => {
+export const callInterrogator = async (userInput, history, stage, telemetry, gameState) => {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userInput, history, stage, telemetry }),
+    body: JSON.stringify({ userInput, history, stage, telemetry, gameState }),
   });
 
   if (!response.ok) {
