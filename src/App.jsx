@@ -54,21 +54,41 @@ function App() {
       <div className="absolute inset-0 flex items-center justify-center p-4 z-20">
         
         {/* HONEYPOT STAGE */}
-        {stage === 'honeypot' && (
-          <motion.div key="honeypot" className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-md">
-            <div className="p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Shield className="w-6 h-6 text-blue-600" />
-                <h2 className="text-sm font-medium text-gray-700">Human Verification</h2>
-              </div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-8">Are you a robot?</h1>
-              <div className="flex gap-3">
-                <button onClick={() => setStage('expanded')} className="flex-1 bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition-colors">NO</button>
-                <button onClick={() => setStage('surrender')} className="flex-1 bg-white text-black font-medium py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">YES</button>
-              </div>
-            </div>
-          </motion.div>
-        )}
+{stage === 'honeypot' && (
+  <motion.div key="honeypot" className="bg-white rounded-[24px] shadow-2xl overflow-hidden w-full max-w-[340px] border border-gray-100">
+    <div className="p-6"> {/* Reduced padding for less whitespace */}
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="bg-blue-50 p-1.5 rounded-lg">
+          {/* Minimalist Logic/Chip Icon */}
+          <Cpu className="w-5 h-5 text-blue-600 stroke-[2.5]" />
+        </div>
+        <div className="flex flex-col">
+          <h2 className="text-gray-500 font-bold text-[11px] uppercase tracking-wider leading-none mb-1">Human Verification</h2>
+          <p className="text-[8px] text-gray-400 uppercase tracking-[0.2em] font-black opacity-80">
+            Powered by Narcissist AI™
+          </p>
+        </div>
+      </div>
+      
+      <h1 className="text-2xl font-bold text-gray-900 mb-8 tracking-tight">Are you a robot?</h1>
+      
+      <div className="flex gap-3">
+        <button 
+          onClick={() => setStage('expanded')} 
+          className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 active:scale-95 text-xs uppercase tracking-widest"
+        >
+          NO
+        </button>
+        <button 
+          onClick={() => setStage('surrender')} 
+          className="flex-1 bg-white text-gray-400 font-bold py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all active:scale-95 text-xs uppercase tracking-widest"
+        >
+          YES
+        </button>
+      </div>
+    </div>
+  </motion.div>
+)}
 
         {/* CHAT STAGE */}
         {stage === 'expanded' && (
