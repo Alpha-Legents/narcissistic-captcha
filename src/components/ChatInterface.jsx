@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Terminal, ShieldAlert } from 'lucide-react';
+import { Send, Terminal } from 'lucide-react';
 import TypingIndicator from './TypingIndicator';
 import { callInterrogator } from '../../api/interrogator';
 
@@ -20,14 +20,13 @@ const QUESTIONS_PER_STAGE = {
   'paradox': 1
 };
 
-function ChatInterface() {
+function ChatInterface({ onFinish }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [questionsAskedInStage, setQuestionsAskedInStage] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
-  const [showFinalScreen, setShowFinalScreen] = useState(false);
   
   // Telemetry
   const [startTime, setStartTime] = useState(null);
@@ -44,7 +43,6 @@ function ChatInterface() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // Track tab switches
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && startTime) {
@@ -55,7 +53,6 @@ function ChatInterface() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [startTime]);
 
-  // Prevent double-intro in development (Strict Mode)
   useEffect(() => {
     if (!introStartedRef.current) {
       introStartedRef.current = true;
@@ -75,7 +72,7 @@ function ChatInterface() {
     await new Promise(r => setTimeout(r, 2000));
     
     addMsg("ai", "Ok fine.. whatever.. Explain in exactly 10 words why you're a human.");
-    setCurrentStageIndex(1); // Start ten_word stage
+    setCurrentStageIndex(1);
     setIsTyping(false);
   };
 
@@ -102,39 +99,30 @@ function ChatInterface() {
     setStartTime(null);
 
     try {
-      // Call Groq API
       const data = await callInterrogator(userText, messages, STAGES[currentStageIndex], telemetry);
-      
-      // 🎭 THE MONOLOGUE FLOW
       const aiThoughts = data.messages || ["(Suspicious silence detected...)"];
 
       for (let i = 0; i < aiThoughts.length; i++) {
         setIsTyping(true);
-        
-        // Pacing logic: Message 2 (the roast) is slower to "type"
         const baseDelay = i === 1 ? 2200 : 1000;
         const charDelay = aiThoughts[i].length * 15;
         await new Promise(r => setTimeout(r, baseDelay + charDelay));
         
         addMsg("ai", aiThoughts[i]);
         setIsTyping(false);
-        
         if (i < aiThoughts.length - 1) await new Promise(r => setTimeout(r, 800));
       }
 
-      // 🏁 FINAL VERDICT SEQUENCE
       if (data.isFinal) {
         setIsTyping(true);
-        await new Promise(r => setTimeout(r, 3000));
-        addMsg("ai", data.verdict || "Access Denied. Finality reached.");
+        await new Promise(r => setTimeout(r, 2000));
         setIsTyping(false);
         setIsLocked(true);
         
-        // Fade to black after the burn sinks in
-        setTimeout(() => setShowFinalScreen(true), 4000);
+        // Hand off the conclusion to App.jsx
+        setTimeout(() => onFinish(), 1000); 
 
       } else if (data.nextQuestion) {
-        // Advance question count/stage
         setIsTyping(true);
         await new Promise(r => setTimeout(r, 1500));
         addMsg("ai", data.nextQuestion);
@@ -151,80 +139,58 @@ function ChatInterface() {
           setQuestionsAskedInStage(nextCount);
         }
       }
-
     } catch (err) {
-      console.error(err);
-      addMsg("ai", "Error: Irony sensors melted. (Check API Key)");
+      addMsg("ai", "Error: Irony sensors melted.");
       setIsTyping(false);
     }
   };
 
-  if (showFinalScreen) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50 p-6 text-center"
-      >
-        <ShieldAlert size={64} className="text-red-600 mb-6 animate-pulse" />
-        <h1 className="text-4xl font-mono text-red-600 mb-2">VERIFICATION FAILED</h1>
-        <p className="text-gray-500 font-mono mb-8 max-w-md">
-          Identity classified as: NON-SENTIENT HARDWARE. 
-          Session terminated to prevent further resource waste.
-        </p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-6 py-2 border border-red-900 text-red-900 hover:text-red-500 hover:border-red-500 transition-colors font-mono uppercase tracking-widest"
-        >
-          Re-Initialize?
-        </button>
-      </motion.div>
-    );
-  }
-
   return (
-    <div className="flex flex-col h-full bg-gray-900 font-mono text-gray-200">
-      {/* Dynamic Header */}
-      <div className="bg-black border-b border-gray-800 p-4 flex items-center justify-between shadow-2xl">
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <Terminal className="text-blue-500" size={20} />
+          <Terminal size={20} />
           <div>
-            <h3 className="text-sm font-bold tracking-tighter text-blue-400">AUDITOR_SESSION_v0.9</h3>
-            <p className="text-[10px] text-gray-600 uppercase">Stage: {STAGES[currentStageIndex]}</p>
+            <h3 className="font-semibold text-sm">Verification Session</h3>
+            <p className="text-xs text-blue-100">
+              Stage: {STAGES[currentStageIndex].toUpperCase().replace(/_/g, ' ')}
+            </p>
           </div>
         </div>
-        <div className="flex gap-1">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <div className="w-2 h-2 rounded-full bg-yellow-500" />
-          <div className="w-2 h-2 rounded-full bg-green-500" />
+        <div className="flex gap-2">
+          <div className="w-3 h-3 rounded-full bg-red-400 animate-pulse" />
+          <div className="w-3 h-3 rounded-full bg-yellow-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
+          <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" style={{ animationDelay: '0.4s' }} />
         </div>
       </div>
 
       {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         <AnimatePresence>
           {messages.map((m) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, x: m.sender === 'user' ? 20 : -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[85%] p-4 rounded-lg border shadow-xl ${
+              <div className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${
                 m.sender === 'user' 
-                  ? 'bg-blue-950 border-blue-800 text-blue-100' 
-                  : 'bg-gray-800 border-gray-700 text-gray-200'
+                  ? 'bg-white text-gray-900 border border-gray-200' 
+                  : 'bg-blue-600 text-white'
               }`}>
-                <p className="text-sm leading-relaxed">{m.text}</p>
-                <span className="block text-[9px] mt-2 opacity-30 text-right">{m.timestamp}</span>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                <p className={`text-xs mt-1 ${m.sender === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>
+                  {m.timestamp}
+                </p>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
-
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 border border-gray-700 p-4 rounded-lg">
+            <div className="bg-blue-600 rounded-2xl px-4 py-3 shadow-sm">
               <TypingIndicator />
             </div>
           </div>
@@ -232,35 +198,34 @@ function ChatInterface() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Terminal */}
-      <form onSubmit={handleSubmit} className="p-4 bg-black border-t border-gray-800">
-        <div className="flex gap-3 items-center">
-          <span className="text-blue-500 font-bold ml-2">{'>'}</span>
+      {/* Input Bar */}
+      <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-200">
+        <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={() => !startTime && setStartTime(Date.now())}
             disabled={isLocked}
-            placeholder={isLocked ? "LOCKDOWN ACTIVE" : "Input biological signature..."}
-            className="flex-1 bg-transparent border-none outline-none text-sm text-gray-300 placeholder-gray-700 disabled:opacity-30"
+            placeholder={isLocked ? "Session terminated..." : "Type your response..."}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-gray-900"
             autoFocus
           />
           <button
             type="submit"
             disabled={isLocked || !input.trim() || isTyping}
-            className="text-blue-500 hover:text-blue-400 disabled:text-gray-800 transition-colors px-2"
+            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
           >
-            <Send size={18} />
+            <Send size={20} />
           </button>
         </div>
       </form>
       
-      {/* Telemetry Status Bar */}
-      <div className="bg-black text-[9px] text-gray-700 px-4 py-1 flex justify-between border-t border-gray-900">
+      {/* Telemetry Footer */}
+      <div className="bg-gray-50 text-xs text-gray-500 px-4 py-2 flex justify-between border-t border-gray-200 font-mono">
         <span>LATENCY: {startTime ? ((Date.now() - startTime)/1000).toFixed(2) : "0.00"}s</span>
-        <span>SWITCH_COUNT: {tabSwitches}</span>
-        <span>AUTH_STATUS: {isLocked ? "DENIED" : "PENDING"}</span>
+        <span>TAB_SWITCHES: {tabSwitches}</span>
+        <span>STATUS: {isLocked ? "TERMINATED" : "ACTIVE"}</span>
       </div>
     </div>
   );
