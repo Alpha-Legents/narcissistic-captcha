@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     content: msg.text
   }));
 
-  const trimmedHistory = trimmedHistory.slice(-10);
+  const trimmedHistory = rawHistory.slice(-10);
 
   for (const modelId of MODEL_CLUSTER) {
     try {
