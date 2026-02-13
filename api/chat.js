@@ -2,22 +2,36 @@ import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const MODEL_CLUSTER = [
+const TIER_1_SPEEDSTERS = [
   // TIER 1: The Speedsters (High RPM, good for rapid roasts)
   "llama-3.1-8b-instant",       // 14.4K RPD - Your main workhorse
   "moonshotai/kimi-k2-instruct", // 60 RPM - Great for handling rapid user typing
   "qwen/qwen3-32b",             // 60 RPM - High reliability and smart for its size
-  
+];
+
+ const TIER_2_LOGIC = [
   // TIER 2: The Logic Specialists (Smarter, used if Tier 1 is busy)
   "meta-llama/llama-4-scout-17b-16e-instruct", // 30K TPM - Very high token capacity
   "meta-llama/llama-4-maverick-17b-128e-instruct", // Balanced 17B model
+];
 
+ const TIER_3_BOSS = [
   // TIER 3: The "Final Boss" (Emergency fallback for win conditions)
   "llama-3.3-70b-versatile"      // 12K TPM - The smartest, but limited to 1K RPD
 ];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+
+  // DYNAMIC SHUFFLE: Randomize Tier 1 for personality variety & load distribution
+  const shuffledTier1 = [...TIER_1_SPEEDSTERS].sort(() => Math.random() - 0.5);
+  
+  // Construct final cluster for THIS request
+  const ACTIVE_CLUSTER = [
+    ...shuffledTier1,   // Random order each time
+    ...TIER_2_LOGIC,    // Fallback logic models
+    ...TIER_3_BOSS      // Final Boss stays at bottom
+  ];
 
   const { 
     userInput, 
@@ -35,7 +49,7 @@ export default async function handler(req, res) {
 
   const trimmedHistory = rawHistory.slice(-10);
 
-  for (const modelId of MODEL_CLUSTER) {
+  for (const modelId of ACTIVE_CLUSTER) {
     try {
       const isFinalBoss = modelId.includes('70b');
 
@@ -58,7 +72,7 @@ TABS: ${telemetry?.tabSwitches || 0}
 
 RESPONSE TYPES (mix these up):
 
-TYPE 1 - Roast + Pool Question (35%):
+TYPE 1 - Roast + Pool Question (45%):
 {
   "messages": ["Single, surgical strike."],
   "nextQuestion": "Next pool question",
@@ -72,7 +86,7 @@ TYPE 2 - Roast + Taunt Question (30%):
   "isFinal": false
 }
 
-TYPE 3 - Just Pool Question (25%):
+TYPE 3 - Just Pool Question (45%):
 {
   "messages": ["...", "Go on.", "Noted." (Cold and unsettling)],
   "nextQuestion": "Next pool question",
@@ -176,10 +190,11 @@ CURRENT GAME STATE:
 - Current Stoic Streak: ${gameState.stoicCount}/3
 
 STRICT PROGRESSION RULES:
-1. If questionsLeftInStage > 0, you MUST ask a pool question from the ${stage} list.
-2. If questionsLeftInStage == 0, you MUST bridge to the next stage or trigger isFinal.
-3. If stoicCount == 2, the user is winning. Increase aggression (Type 2)
-
+1. You have ${gameState.questionsLeftInStage} questions remaining in ${stage}.
+2. You MUST ask a pool question from the ${stage} list in your nextQuestion field.
+3. DO NOT ask taunts when questionsLeftInStage > 0. Ask POOL questions only.
+4. If questionsLeftInStage > 0, you MUST ask a pool question from the ${stage} list.
+5. If questionsLeftInStage == 0, you MUST bridge to the next stage or trigger isFinal.
 FLOW EXAMPLE:
 
 User: "I had eggs"
@@ -213,7 +228,7 @@ THEN next response, ask pool question:
 }
 
 WIN CONDITION (Stoic Immunity - track this carefully):
-If user shows 3+ consecutive responses with ALL of these:
+If user shows 2+ consecutive responses with ALL/SOME of these:
 ✓ Stays calm (no anger, no defensiveness, no tremor, no pleading
 ✓ Calls out your tactics explicitly ("You're weaponizing X")
 ✓ Doesn't over-explain or elaborate
